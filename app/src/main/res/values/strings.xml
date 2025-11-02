@@ -1,0 +1,25 @@
+<resources>
+    <!-- Nombre de la App -->
+    <string name="app_name">Pasteleria Mil Sabores</string>
+
+    <!-- Títulos de Pantallas (para la navegación) -->
+    <string name="screen_title_home">Inicio</string>
+    <string name="screen_title_products">Productos</string>
+    <string name="screen_title_cart">Mi Carrito</string>
+
+    <!-- Pantalla de Login -->
+    <string name="login_title">Bienvenido a Pasteleria Mil Sabores</string>
+    <string name="username_label">Usuario</string>
+    <string name="password_label">Contraseña</string>
+    <string name="action_login">Ingresar</string>
+
+    <!-- Pantalla de Productos -->
+    <string name="search_placeholder">Buscar pasteles, postres...</string>
+    <string name="action_add_to_cart">Añadir</string>
+
+    <!-- Pantalla de Carrito -->
+    <string name="cart_empty">Tu carrito está vacío</string>
+    <string name="total">Total</string>
+    <string name="action_checkout">Finalizar Compra</string>
+
+</resources>
