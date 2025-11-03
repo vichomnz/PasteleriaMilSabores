@@ -101,7 +101,11 @@ fun RegisterScreen(
 
         OutlinedTextField(
             value = telefono,
-            onValueChange = { telefono = it },
+            onValueChange = { newValue ->
+                if (newValue.all { it.isDigit() } && newValue.length <= 9) {
+                    telefono = newValue
+                }
+            },
             label = { Text("Teléfono") },
             modifier = Modifier.fillMaxWidth(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -180,6 +184,9 @@ fun RegisterScreen(
                     }
                     rut.length < 9 || rut.length > 10 -> {
                         registrationError = "El RUT debe tener entre 9 y 10 caracteres"
+                    }
+                    telefono.length < 8 || telefono.length > 9 -> {
+                        registrationError = "El teléfono debe tener entre 8 y 9 dígitos"
                     }
                     email.length > 30 -> {
                         registrationError = "El correo no puede tener más de 30 caracteres"
