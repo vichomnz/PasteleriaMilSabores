@@ -36,8 +36,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -47,7 +45,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController // Importado
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -56,7 +54,9 @@ import com.example.pasteleriamilsabores.R
 import com.example.pasteleriamilsabores.ui.screens.CartScreen
 import com.example.pasteleriamilsabores.ui.screens.LoginScreen
 import com.example.pasteleriamilsabores.ui.screens.ProductListScreen
+import com.example.pasteleriamilsabores.ui.screens.RegisterScreen
 import com.example.pasteleriamilsabores.viewmodel.CartViewModel
+import com.example.pasteleriamilsabores.viewmodel.LoginViewModel
 import com.example.pasteleriamilsabores.viewmodel.ProductListViewModel
 import kotlinx.coroutines.launch
 
@@ -67,6 +67,7 @@ sealed class Destinations(
     val icon: ImageVector? = null
 ) {
     data object Login : Destinations("login")
+    data object Register : Destinations("register")
     data object Home : Destinations("home", R.string.screen_title_home, Icons.Default.Home)
     data object Products : Destinations("products", R.string.screen_title_products, Icons.AutoMirrored.Filled.List)
     data object Cart : Destinations("cart", R.string.screen_title_cart, Icons.Default.ShoppingCart)
@@ -77,20 +78,42 @@ sealed class Destinations(
 // --- Navegación principal de la App ---
 @Composable
 fun AppNavigation() {
-    // rememberNavController() devuelve un NavHostController
     val navController = rememberNavController()
-    // Controladores de ViewModels
     val productListViewModel: ProductListViewModel = viewModel()
     val cartViewModel: CartViewModel = viewModel()
+    val loginViewModel: LoginViewModel = viewModel()
 
-    var showLogin by rememberSaveable { mutableStateOf(true) }
-
-    if (showLogin) {
-        LoginScreen(onLoginSuccess = { showLogin = false })
-    } else {
-        MainScaffold(navController = navController, cartViewModel = cartViewModel, productListViewModel = productListViewModel)
+    NavHost(navController = navController, startDestination = Destinations.Login.route) {
+        composable(Destinations.Login.route) {
+            LoginScreen(
+                loginViewModel = loginViewModel,
+                onLoginSuccess = {
+                    navController.navigate(Destinations.Home.route) {
+                        popUpTo(Destinations.Login.route) { inclusive = true }
+                    }
+                },
+                onRegisterClick = { navController.navigate(Destinations.Register.route) }
+            )
+        }
+        composable(Destinations.Register.route) {
+            RegisterScreen(
+                loginViewModel = loginViewModel,
+                onRegisterSuccess = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Destinations.Home.route) {
+            MainScaffold(
+                navController = navController,
+                cartViewModel = cartViewModel,
+                productListViewModel = productListViewModel
+            )
+        }
     }
 }
+
+// --- Rest of the file is unchanged... a
 
 // --- Estructura principal (Scaffold) con Drawer y Bottom Bar ---
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,14 +133,17 @@ fun MainScaffold(
         Destinations.Products,
         Destinations.Cart
     )
+    
+    val innerNavController = rememberNavController()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            DrawerContent(navController, cartItemCount, onLogout = {
-                // Aquí iría la lógica de logout (limpiar viewModel, etc)
-                // Por ahora, solo cerramos el drawer
+            DrawerContent(innerNavController, cartItemCount, onLogout = {
                 scope.launch { drawerState.close() }
+                navController.navigate(Destinations.Login.route) {
+                    popUpTo(Destinations.Home.route) { inclusive = true }
+                }
             })
         }
     ) {
@@ -130,7 +156,7 @@ fun MainScaffold(
                             Icon(Icons.Default.Menu, contentDescription = "Menú")
                         }
                     },
-                    actions = { TopBarActions(navController, cartItemCount) },
+                    actions = { TopBarActions(innerNavController, cartItemCount) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -140,7 +166,7 @@ fun MainScaffold(
                 )
             },
             bottomBar = {
-                BottomNavigationBar(navController = navController, items = navItems, cartItemCount = cartItemCount)
+                BottomNavigationBar(navController = innerNavController, items = navItems, cartItemCount = cartItemCount)
             }
         ) { paddingValues ->
             Box(
@@ -148,17 +174,13 @@ fun MainScaffold(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // NavHost que contiene todas las pantallas
-                NavHost(navController = navController, startDestination = Destinations.Home.route) {
+                NavHost(navController = innerNavController, startDestination = Destinations.Home.route) {
                     composable(Destinations.Home.route) {
-                        // Pantalla de bienvenida simple
                         Box(modifier = Modifier.fillMaxSize()) {
                             Text("¡Bienvenido a Pasteleria Mil Sabores!", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(16.dp))
                         }
                     }
                     composable(Destinations.Products.route) {
-                        // --- CORRECCIÓN AQUÍ ---
-                        // Modificado para coincidir con tu ProductListScreen.kt
                         ProductListScreen(
                             viewModel = productListViewModel,
                             cartViewModel = cartViewModel
@@ -167,7 +189,7 @@ fun MainScaffold(
                     composable(Destinations.Cart.route) {
                         CartScreen(
                             cartViewModel = cartViewModel,
-                            onBackPress = { navController.popBackStack() }
+                            onBackPress = { innerNavController.popBackStack() }
                         )
                     }
                 }
@@ -304,4 +326,3 @@ fun DrawerContent(navController: NavController, cartItemCount: Int, onLogout: ()
 fun NavDestination?.isRouteInHierarchy(route: String): Boolean {
     return this?.hierarchy?.any { it.route == route } == true
 }
-
