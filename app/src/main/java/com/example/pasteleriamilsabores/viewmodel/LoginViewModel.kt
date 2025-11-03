@@ -9,6 +9,7 @@ class LoginViewModel : ViewModel() {
     val users: List<User> = _users
 
     var loginError = mutableStateOf(false)
+    var currentUser = mutableStateOf<User?>(null)
 
     fun registerUser(user: User): Boolean {
         if (_users.any { it.email == user.email }) {
@@ -21,6 +22,11 @@ class LoginViewModel : ViewModel() {
     fun login(email: String, password: String): Boolean {
         val foundUser = _users.find { it.email == email && it.password == password }
         loginError.value = foundUser == null
+        currentUser.value = foundUser
         return foundUser != null
+    }
+
+    fun logout() {
+        currentUser.value = null
     }
 }

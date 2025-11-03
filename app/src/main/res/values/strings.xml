@@ -6,6 +6,7 @@
     <string name="screen_title_home">Inicio</string>
     <string name="screen_title_products">Productos</string>
     <string name="screen_title_cart">Mi Carrito</string>
+    <string name="screen_title_profile">Perfil</string>
 
     <!-- Pantalla de Login -->
     <string name="login_title">Bienvenido a Pasteleria Mil Sabores</string>

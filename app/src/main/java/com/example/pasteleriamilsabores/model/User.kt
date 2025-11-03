@@ -8,5 +8,6 @@ data class User(
     val telefono: String,
     val direccion: String,
     val email: String,
-    val password: String
+    val password: String,
+    val purchaseHistory: MutableList<Purchase> = mutableListOf()
 )

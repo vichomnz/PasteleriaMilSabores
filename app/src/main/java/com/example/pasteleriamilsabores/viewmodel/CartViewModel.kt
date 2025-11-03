@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pasteleriamilsabores.model.CartItem
 import com.example.pasteleriamilsabores.model.Product
+import com.example.pasteleriamilsabores.model.Purchase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
-class CartViewModel : ViewModel() {
+class CartViewModel(private val loginViewModel: LoginViewModel) : ViewModel() {
 
     private val _cartItems = MutableStateFlow<Map<String, CartItem>>(emptyMap())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
@@ -70,11 +71,11 @@ class CartViewModel : ViewModel() {
     }
 
     fun checkout() {
-        Log.d("CartViewModel", "Iniciando Checkout...")
-        Log.d("CartViewModel", "Total: ${totalPrice.value}")
-        _cartItems.value.values.forEach { item ->
-            Log.d("CartViewModel", "Item: ${item.product.name}, Cantidad: ${item.quantity}")
-        }
+        val purchase = Purchase(
+            items = _cartItems.value.values.map { it.product },
+            total = totalPrice.value
+        )
+        loginViewModel.currentUser.value?.purchaseHistory?.add(purchase)
         _cartItems.value = emptyMap()
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -36,10 +37,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
@@ -54,6 +58,7 @@ import com.example.pasteleriamilsabores.R
 import com.example.pasteleriamilsabores.ui.screens.CartScreen
 import com.example.pasteleriamilsabores.ui.screens.LoginScreen
 import com.example.pasteleriamilsabores.ui.screens.ProductListScreen
+import com.example.pasteleriamilsabores.ui.screens.ProfileScreen
 import com.example.pasteleriamilsabores.ui.screens.RegisterScreen
 import com.example.pasteleriamilsabores.viewmodel.CartViewModel
 import com.example.pasteleriamilsabores.viewmodel.LoginViewModel
@@ -70,6 +75,7 @@ sealed class Destinations(
     data object Register : Destinations("register")
     data object Home : Destinations("home", R.string.screen_title_home, Icons.Default.Home)
     data object Products : Destinations("products", R.string.screen_title_products, Icons.AutoMirrored.Filled.List)
+    data object Profile : Destinations("profile", R.string.screen_title_profile, Icons.Default.Person)
     data object Cart : Destinations("cart", R.string.screen_title_cart, Icons.Default.ShoppingCart)
     // Ruta "fantasma" para el drawer
     data object Logout : Destinations("logout")
@@ -79,9 +85,13 @@ sealed class Destinations(
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-    val productListViewModel: ProductListViewModel = viewModel()
-    val cartViewModel: CartViewModel = viewModel()
     val loginViewModel: LoginViewModel = viewModel()
+    val productListViewModel: ProductListViewModel = viewModel()
+    val cartViewModel: CartViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return CartViewModel(loginViewModel) as T
+        }
+    })
 
     NavHost(navController = navController, startDestination = Destinations.Login.route) {
         composable(Destinations.Login.route) {
@@ -106,6 +116,7 @@ fun AppNavigation() {
         composable(Destinations.Home.route) {
             MainScaffold(
                 navController = navController,
+                loginViewModel = loginViewModel,
                 cartViewModel = cartViewModel,
                 productListViewModel = productListViewModel
             )
@@ -113,13 +124,12 @@ fun AppNavigation() {
     }
 }
 
-// --- Rest of the file is unchanged... a
-
 // --- Estructura principal (Scaffold) con Drawer y Bottom Bar ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScaffold(
     navController: NavHostController,
+    loginViewModel: LoginViewModel,
     cartViewModel: CartViewModel,
     productListViewModel: ProductListViewModel
 ) {
@@ -141,6 +151,7 @@ fun MainScaffold(
         drawerContent = {
             DrawerContent(innerNavController, cartItemCount, onLogout = {
                 scope.launch { drawerState.close() }
+                loginViewModel.logout()
                 navController.navigate(Destinations.Login.route) {
                     popUpTo(Destinations.Home.route) { inclusive = true }
                 }
@@ -191,6 +202,9 @@ fun MainScaffold(
                             cartViewModel = cartViewModel,
                             onBackPress = { innerNavController.popBackStack() }
                         )
+                    }
+                    composable(Destinations.Profile.route) {
+                        ProfileScreen(loginViewModel = loginViewModel)
                     }
                 }
             }
@@ -276,6 +290,7 @@ fun DrawerContent(navController: NavController, cartItemCount: Int, onLogout: ()
     val drawerItems = listOf(
         Destinations.Home,
         Destinations.Products,
+        Destinations.Profile,
         Destinations.Cart
     )
 
