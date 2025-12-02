@@ -4,6 +4,8 @@
 
     <!-- Permiso para cargar imágenes de internet -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Permiso para verificar el estado de la red -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"

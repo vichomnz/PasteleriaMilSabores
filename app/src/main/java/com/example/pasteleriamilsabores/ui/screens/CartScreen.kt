@@ -98,7 +98,8 @@ fun CartScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(cartItems, key = { it.product.id }) { item ->
+                    // CORRECCIÓN AQUÍ: Usamos elvis operator para asegurar que la clave no sea nula
+                    items(cartItems, key = { it.product.sku ?: "" }) { item ->
                         CartItemRow(item = item, viewModel = cartViewModel)
                     }
                 }
@@ -182,8 +183,10 @@ fun CartItemRow(item: CartItem, viewModel: CartViewModel) {
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
+                    // Manejamos la unidad nullable de forma segura
+                    val unitText = item.product.unit ?: ""
                     Text(
-                        text = "$${String.format("%.0f", item.product.price)} / ${item.product.unit}",
+                        text = "$${String.format("%.0f", item.product.price)} / $unitText",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )

@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
+    // CORRECCIÓN: Usamos la versión de KSP compatible con Kotlin 2.0.0
+    id 'com.google.devtools.ksp' version '2.0.0-1.0.21'
 }
 
 android {
@@ -38,9 +40,6 @@ android {
         // Habilitar Jetpack Compose
         compose true
     }
-
-    // 2. ELIMINAR EL BLOQUE 'composeOptions'
-    // El bloque 'composeOptions { ... }' que estaba aquí se elimina.
 
     packagingOptions {
         resources {
@@ -80,8 +79,17 @@ dependencies {
     androidTestImplementation libs.androidx.compose.ui.test.junit4
     debugImplementation libs.androidx.compose.ui.tooling
     debugImplementation libs.androidx.compose.ui.test.manifest
-    // Add the Material 3 dependency here
+    
     implementation("androidx.compose.material3:material3:1.2.0-alpha10")
 
-}
+    // --- Retrofit & Gson (Consumo API) ---
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
 
+    // --- Room Database (Persistencia Local) ---
+    def room_version = "2.6.1"
+    implementation "androidx.room:room-runtime:$room_version"
+    implementation "androidx.room:room-ktx:$room_version"
+    // KSP para procesamiento de anotaciones
+    ksp "androidx.room:room-compiler:$room_version"
+}

@@ -1,5 +1,6 @@
 package com.example.pasteleriamilsabores.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,7 +16,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -30,9 +33,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.pasteleriamilsabores.R
 import com.example.pasteleriamilsabores.model.Product
 import com.example.pasteleriamilsabores.viewmodel.CartViewModel
 import com.example.pasteleriamilsabores.viewmodel.ProductListViewModel
@@ -44,12 +49,29 @@ fun ProductListScreen(
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val products by viewModel.filteredProducts.collectAsState()
+    val message by viewModel.message.collectAsState()
+    val context = LocalContext.current
+
+    if (message != null) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.clearMessage()
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(8.dp)
     ) {
+        // Botón para guardar en BD Local
+        Button(
+            onClick = { viewModel.saveToDb() },
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+        ) {
+            Icon(Icons.Default.Save, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Almacenar en Base de Datos Local")
+        }
+
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { viewModel.onSearchQueryChanged(it) },
@@ -90,8 +112,9 @@ fun ProductCard(product: Product, onAddToCart: () -> Unit) {
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Como la API no devuelve imágenes, usamos el placeholder o el recurso local si coincide
             Image(
-                painter = painterResource(id = product.imageRes),
+                painter = painterResource(id = if (product.imageRes != 0) product.imageRes else R.drawable.ic_launcher_foreground),
                 contentDescription = product.name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
@@ -103,7 +126,8 @@ fun ProductCard(product: Product, onAddToCart: () -> Unit) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(product.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(product.description, style = MaterialTheme.typography.bodySmall)
+                Text("SKU: ${product.sku}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                Text(product.description, style = MaterialTheme.typography.bodySmall, maxLines = 2)
                 Text("$${product.price}", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
             }
 

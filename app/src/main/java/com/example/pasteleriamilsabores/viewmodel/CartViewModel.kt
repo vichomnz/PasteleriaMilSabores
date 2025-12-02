@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.update
 
 class CartViewModel(private val loginViewModel: LoginViewModel) : ViewModel() {
 
+
     private val _cartItems = MutableStateFlow<Map<String, CartItem>>(emptyMap())
     val cartItems: StateFlow<List<CartItem>> = _cartItems
         .map { it.values.toList().sortedBy { item -> item.product.name } }
@@ -37,11 +38,11 @@ class CartViewModel(private val loginViewModel: LoginViewModel) : ViewModel() {
     fun addToCart(product: Product) {
         _cartItems.update { currentCart ->
             val cart = currentCart.toMutableMap()
-            val currentItem = cart[product.id]
+            val currentItem = cart[product.sku]
             if (currentItem != null) {
-                cart[product.id] = currentItem.copy(quantity = currentItem.quantity + 1)
+                cart[product.sku] = currentItem.copy(quantity = currentItem.quantity + 1)
             } else {
-                cart[product.id] = CartItem(product = product, quantity = 1)
+                cart[product.sku] = CartItem(product = product, quantity = 1)
             }
             cart
         }
@@ -50,12 +51,12 @@ class CartViewModel(private val loginViewModel: LoginViewModel) : ViewModel() {
     fun decreaseQuantity(product: Product) {
         _cartItems.update { currentCart ->
             val cart = currentCart.toMutableMap()
-            val currentItem = cart[product.id]
+            val currentItem = cart[product.sku]
             if (currentItem != null) {
                 if (currentItem.quantity > 1) {
-                    cart[product.id] = currentItem.copy(quantity = currentItem.quantity - 1)
+                    cart[product.sku] = currentItem.copy(quantity = currentItem.quantity - 1)
                 } else {
-                    cart.remove(product.id)
+                    cart.remove(product.sku)
                 }
             }
             cart
@@ -65,7 +66,7 @@ class CartViewModel(private val loginViewModel: LoginViewModel) : ViewModel() {
     fun removeFromCart(product: Product) {
         _cartItems.update { currentCart ->
             val cart = currentCart.toMutableMap()
-            cart.remove(product.id)
+            cart.remove(product.sku)
             cart
         }
     }

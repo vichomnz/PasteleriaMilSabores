@@ -1,9 +1,13 @@
 package com.example.pasteleriamilsabores.navigation
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -15,6 +19,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -38,8 +44,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -55,15 +64,18 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.pasteleriamilsabores.R
+import com.example.pasteleriamilsabores.data.ProductRepository
 import com.example.pasteleriamilsabores.ui.screens.CartScreen
 import com.example.pasteleriamilsabores.ui.screens.LoginScreen
 import com.example.pasteleriamilsabores.ui.screens.ProductListScreen
 import com.example.pasteleriamilsabores.ui.screens.ProfileScreen
 import com.example.pasteleriamilsabores.ui.screens.RegisterScreen
+import com.example.pasteleriamilsabores.utils.NetworkUtils
 import com.example.pasteleriamilsabores.viewmodel.CartViewModel
 import com.example.pasteleriamilsabores.viewmodel.LoginViewModel
 import com.example.pasteleriamilsabores.viewmodel.ProductListViewModel
 import kotlinx.coroutines.launch
+import android.widget.Toast
 
 // --- Definición de todas las rutas de la app ---
 sealed class Destinations(
@@ -84,9 +96,18 @@ sealed class Destinations(
 // --- Navegación principal de la App ---
 @Composable
 fun AppNavigation() {
+    val context = LocalContext.current
     val navController = rememberNavController()
+    val productRepository = ProductRepository(context)
+
     val loginViewModel: LoginViewModel = viewModel()
-    val productListViewModel: ProductListViewModel = viewModel()
+    
+    val productListViewModel: ProductListViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return ProductListViewModel(productRepository) as T
+        }
+    })
+
     val cartViewModel: CartViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return CartViewModel(loginViewModel) as T
@@ -187,9 +208,10 @@ fun MainScaffold(
             ) {
                 NavHost(navController = innerNavController, startDestination = Destinations.Home.route) {
                     composable(Destinations.Home.route) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            Text("¡Bienvenido a Pasteleria Mil Sabores!", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(16.dp))
-                        }
+                        HomeScreen(
+                            navController = innerNavController,
+                            productListViewModel = productListViewModel
+                        )
                     }
                     composable(Destinations.Products.route) {
                         ProductListScreen(
@@ -208,6 +230,66 @@ fun MainScaffold(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun HomeScreen(
+    navController: NavController,
+    productListViewModel: ProductListViewModel
+) {
+    val context = LocalContext.current
+    val message by productListViewModel.message.collectAsState()
+
+    if (message != null) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        productListViewModel.clearMessage()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "¡Bienvenido a Pasteleria Mil Sabores!",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+
+        Button(
+            onClick = {
+                if (NetworkUtils.isInternetAvailable(context)) {
+                    productListViewModel.loadFromApi(
+                        onSuccess = { navController.navigate(Destinations.Products.route) },
+                        onError = { /* El mensaje se muestra por el Toast */ }
+                    )
+                } else {
+                    Toast.makeText(context, "Sin conexión a Internet", Toast.LENGTH_SHORT).show()
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Text("Cargar desde Rest API")
+        }
+
+        Button(
+            onClick = {
+                productListViewModel.loadFromDb(
+                    onSuccess = { navController.navigate(Destinations.Products.route) },
+                    onError = { /* El mensaje se muestra por el Toast */ }
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Text("Cargar desde Base de Datos Local")
         }
     }
 }
@@ -260,12 +342,14 @@ fun BottomNavigationBar(navController: NavController, items: List<Destinations>,
                 label = { Text(stringResource(id = screen.title!!)) },
                 selected = selected,
                 onClick = {
+                    // Lógica de navegación simplificada para asegurar que 'Inicio' siempre vaya al Home
                     navController.navigate(screen.route) {
                         popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+                            // Solo guardamos estado si NO vamos a Home, para que Home se recargue limpio
+                            saveState = screen.route != Destinations.Home.route
                         }
                         launchSingleTop = true
-                        restoreState = true
+                        restoreState = screen.route != Destinations.Home.route
                     }
                 },
                 colors = NavigationBarItemDefaults.colors(
@@ -317,9 +401,13 @@ fun DrawerContent(navController: NavController, cartItemCount: Int, onLogout: ()
                 label = { Text(stringResource(id = screen.title!!)) },
                 selected = selected,
                 onClick = {
+                    // Misma lógica simplificada para el Drawer
                     navController.navigate(screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id)
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = screen.route != Destinations.Home.route
+                        }
                         launchSingleTop = true
+                        restoreState = screen.route != Destinations.Home.route
                     }
                 },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -336,8 +424,6 @@ fun DrawerContent(navController: NavController, cartItemCount: Int, onLogout: ()
         Spacer(Modifier.padding(vertical = 16.dp))
     }
 }
-
-// Helper para saber si la ruta actual está en la jerarquía
 fun NavDestination?.isRouteInHierarchy(route: String): Boolean {
     return this?.hierarchy?.any { it.route == route } == true
 }
